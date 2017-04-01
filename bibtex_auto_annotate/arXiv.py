@@ -3,7 +3,7 @@ from urllib import urlopen, urlencode
 import feedparser
 
 
-def arxiv_url_from_query(search_query):
+def arxiv_eprint_from_query(search_query):
     base_url = 'http://export.arxiv.org/api/query?'
     query = 'search_query={qs}'.format(qs=urlencode({'search_query': search_query, 'start': 0, 'max_results': 1}))
 
@@ -13,4 +13,4 @@ def arxiv_url_from_query(search_query):
     for entry in feedparser.parse(urlopen(base_url + query).read()).entries:
         for link in entry.links:
             if link.rel == 'alternate':
-                return link.href
+                return 'arXiv:{}'.format(link.rel[link.rel.rfind('/')+1:])

@@ -8,7 +8,7 @@ from bibtexparser.customization import doi
 from habanero import Crossref
 
 from bibtex_auto_annotate import get_logger
-from bibtex_auto_annotate.arXiv import arxiv_url_from_query
+from bibtex_auto_annotate.arXiv import arxiv_eprint_from_query
 
 log = get_logger('annotate')
 
@@ -103,7 +103,7 @@ def eprint_from_record(record):
     :rtype `dict`
     """
     if 'eprint' not in record:
-        record['eprint'] = arxiv_url_from_query('id_list={}'.format(record['doi']) if 'doi' in record
+        record['eprint'] = arxiv_eprint_from_query('id_list={}'.format(record['doi']) if 'doi' in record
                                                 else 'all:{}'.format(' '.join('{}'.format(v)
                                                                               for v in record.itervalues())))
 
