@@ -8,6 +8,7 @@ from bibtexparser.customization import doi
 from habanero import Crossref
 
 from bibtex_auto_annotate import get_logger
+from bibtex_auto_annotate.arXiv import arxiv_url_from_query
 
 log = get_logger('annotate')
 
@@ -31,6 +32,7 @@ def annotate(record):
     if not record:
         raise TypeError('record expected to have value')
     record = doi(record)  # adds DOI url link
+    record = eprint_from_record(record)
     return record
 
 
@@ -61,7 +63,7 @@ def try_x_times(x=5):
 
 @try_x_times()
 def doi_from_record(record):
-    """Finds the DOI online then adds it to the record
+    """Finds the DOI online (using CrossRef's API) then adds it to the record
 
     :param record: the record
     :type record: `dict`
@@ -89,6 +91,21 @@ def doi_from_record(record):
         '''
 
     return record
+
+
+def eprint_from_record(record):
+    """Finds the eprint online (using arXiv's API) then adds it to the record
+
+    :param record: the record
+    :type record: `dict`
+
+    :returns the modified record
+    :rtype `dict`
+    """
+    if 'eprint' not in record:
+        record['eprint'] = arxiv_url_from_query('id_list={}'.format(record['doi']) if 'doi' in record
+                                                else 'all:{}'.format(' '.join('{}'.format(v)
+                                                                              for v in record.itervalues())))
 
 
 def get_bibtex_parser():

@@ -1,3 +1,4 @@
 pyyaml
 bibtexparser
 habanero
+feedparser

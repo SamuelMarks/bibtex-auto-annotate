@@ -1,11 +1,12 @@
 bibtex_auto_annotate
 ====================
 
-BibTeX auto annotator. Uses [Crossref](https://www.crossref.org)'s API.
+BibTeX auto annotator. Uses [Crossref](https://www.crossref.org)'s and arXiv's APIs.
 
 ## Features
 Annotates all BibTeX records with:
-  - [DOI](https://en.wikipedia.org/wiki/Digital_object_identifier)s
+  - [DOI](https://en.wikipedia.org/wiki/Digital_object_identifier)s (via CrossRef's API)
+  - [eprint](https://arxiv.org/hypertex/bibstyles/)s (via arXiv's API)
 
 ## Installation
 Ensure [Python](https://www.python.org/downloads) and [`pip`](https://pip.pypa.io/en/stable/installing) are installed, then from your command-line interface run:
