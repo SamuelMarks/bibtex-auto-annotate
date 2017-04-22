@@ -1,5 +1,5 @@
 from setuptools import setup, find_packages
-from os import path
+from os import path, listdir
 from functools import partial
 from itertools import imap, ifilter
 from ast import parse
@@ -16,6 +16,7 @@ if __name__ == '__main__':
 
     to_funcs = lambda *paths: (partial(path.join, path.dirname(__file__), package_name, *paths),
                                partial(path.join, get_python_lib(prefix=''), package_name, *paths))
+    _data_join, _data_install_dir = to_funcs('_data')
 
     setup(
         name=package_name,
@@ -24,5 +25,8 @@ if __name__ == '__main__':
         install_requires=['pyyaml', 'bibtexparser', 'habanero', 'feedparser'],
         test_suite=package_name + '.tests',
         packages=find_packages(),
-        package_dir={package_name: package_name}
+        package_dir={package_name: package_name},
+        data_files=[
+            (_data_install_dir(), map(_data_join, listdir(_data_join())))
+        ]
     )

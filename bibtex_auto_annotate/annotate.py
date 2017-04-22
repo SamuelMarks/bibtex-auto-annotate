@@ -13,7 +13,7 @@ from bibtex_auto_annotate.arXiv import arxiv_eprint_from_query
 log = get_logger('annotate')
 
 cr = Crossref()
-
+retry = 0
 
 class ConnectionError(IOError):
     """A Connection error occurred."""
@@ -36,7 +36,7 @@ def annotate(record):
     return record
 
 
-def try_x_times(x=5):
+def try_x_times(x=retry):
     def dec(f):
         def inner(record):
             attempts, failed_attempts = 0, 0

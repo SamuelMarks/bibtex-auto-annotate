@@ -7,7 +7,7 @@ from os import path
 
 from pkg_resources import resource_filename
 
-from bibtex_auto_annotate.annotate import AnnotateMarshall, doi_from_record
+from bibtex_auto_annotate.annotate import retry, AnnotateMarshall, doi_from_record
 from bibtex_auto_annotate.utils import pp, it_consumes
 
 if python_version_tuple()[0] == '2':
@@ -50,6 +50,8 @@ class BibTeXautoAnnotateTest(TestCase):
 
     @classmethod
     def setUpClass(cls):
+        global retry
+        retry = 5
         with open(path.join(path.dirname(resource_filename('bibtex_auto_annotate', '__main__.py')),
                             '_data', 'quantum_internet.short.bib')) as f:
             cls.full_bibtex_sample = AnnotateMarshall.load(f)

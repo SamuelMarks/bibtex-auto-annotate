@@ -11,7 +11,7 @@ from sys import argv, exit, stderr, stdout
 from codecs import open
 
 from __init__ import __version__
-from bibtex_auto_annotate.annotate import AnnotateMarshall
+import bibtex_auto_annotate.annotate
 
 
 def _build_parser():
@@ -36,6 +36,8 @@ def _build_parser():
     parser.add_argument('-f', '--files', action='append', metavar='FILE', type=extant_file,  # type=extant_file,
                         help='One or more BibTeX files. Accepts * as wildcard for directories or filenames')
     parser.add_argument('-o', '--output-file', dest='outfile', type=str, help='Output BibTeX file', default=stdout)
+    parser.add_argument('-r', '--retry', dest='retry', type=int, help='Retry times (for CrossRef API). [Default: 5]',
+                        default=5)
     return parser
 
 
@@ -58,9 +60,9 @@ def load_parse_change_emit(fh, outfile):
     with open(outfile, 'wt', encoding='ISO-8859-1') as out:
         if not hasattr(fh, 'read'):
             with open(fh, encoding='ISO-8859-1') as fh:
-                AnnotateMarshall.dump(AnnotateMarshall.load(fh), out)
+                bibtex_auto_annotate.annotate.AnnotateMarshall.dump(AnnotateMarshall.load(fh), out)
         else:
-            AnnotateMarshall.dump(AnnotateMarshall.load(fh), out)
+            bibtex_auto_annotate.annotate.AnnotateMarshall.dump(AnnotateMarshall.load(fh), out)
 
 
 def main(args):
@@ -69,6 +71,8 @@ def main(args):
     :param args:
     :type args: `argparse.Namespace`
     """
+    global bibtex_auto_annotate
+    bibtex_auto_annotate.annotate.retry = args.retry
     # args.files = _process_glob_files(args.files)
     load_parse_change_emit_f = partial(load_parse_change_emit, outfile=args.outfile)
     return tuple(imap(load_parse_change_emit_f, args.files))
