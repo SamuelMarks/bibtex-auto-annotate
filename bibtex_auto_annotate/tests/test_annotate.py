@@ -1,13 +1,12 @@
 from __future__ import absolute_import, print_function
 
-from functools import partial
 from platform import python_version_tuple
 from unittest import TestCase, main as unittest_main
 from os import path
 
 from pkg_resources import resource_filename
 
-from bibtex_auto_annotate.annotate import retry, AnnotateMarshall, doi_from_record
+from bibtex_auto_annotate.annotate import deploy_marshall, doi_from_record, try_x_times
 from bibtex_auto_annotate.utils import pp, it_consumes
 
 if python_version_tuple()[0] == '2':
@@ -50,11 +49,7 @@ class BibTeXautoAnnotateTest(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global retry
-        retry = 5
-        with open(path.join(path.dirname(resource_filename('bibtex_auto_annotate', '__main__.py')),
-                            '_data', 'quantum_internet.short.bib')) as f:
-            cls.full_bibtex_sample = AnnotateMarshall.load(f)
+        cls.AnnotateMarshall = deploy_marshall(retry=5)
 
     @staticmethod
     def has_doi_and_link(entry):
@@ -68,12 +63,15 @@ class BibTeXautoAnnotateTest(TestCase):
         return 'doi' in entry and 'link' in entry, 'entry doesn\'t contain `doi` and `link`. Got: {}'.format(entry)
 
     def test_BibDatabase_with_one_entry(self):
-        parsed_entries = AnnotateMarshall.loads(self.bibtex_samples[0])
+        parsed_entries = self.AnnotateMarshall.loads(self.bibtex_samples[0])
         pp(parsed_entries.entries)
         it_consumes(imap(lambda entry: self.assertTrue(*self.has_doi_and_link(entry)),
                          parsed_entries.entries))
 
     def test_full_bibtex_sample(self):
+        with open(path.join(path.dirname(resource_filename('bibtex_auto_annotate', '__main__.py')),
+                            '_data', 'quantum_internet.short.bib')) as f:
+            self.full_bibtex_sample = self.AnnotateMarshall.load(f)
         parsed_entries = self.full_bibtex_sample.entries
         it_consumes(imap(lambda entry: self.assertTrue(*self.has_doi_and_link(entry)),
                          parsed_entries))
@@ -85,7 +83,7 @@ class BibTeXautoAnnotateTest(TestCase):
             u'author': u'Saleh Rahimi-Keshari and Timothy C. Ralph and Carlton M. Caves',
             'ID': 'bib:SalehEffSim16', u'volume': u'6', u'year': u'2016', 'ENTRYTYPE': u'article'
         }
-        pp(doi_from_record(entry))
+        pp(try_x_times(5)(doi_from_record)(entry))
 
 
 if __name__ == '__main__':

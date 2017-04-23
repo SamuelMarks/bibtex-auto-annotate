@@ -13,35 +13,49 @@ from bibtex_auto_annotate.arXiv import arxiv_eprint_from_query
 log = get_logger('annotate')
 
 cr = Crossref()
-retry = 0
+
 
 class ConnectionError(IOError):
     """A Connection error occurred."""
 
 
-def annotate(record):
-    """Follows visitor design-pattern to modify BibTeX records
-
-    :param record: the record
-    :type record: `dict`
-
-    :returns the modified record
-    :rtype `dict`
+def annotate(retry):
     """
-    record = doi_from_record(record)
-    if not record:
-        raise TypeError('record expected to have value')
-    record = doi(record)  # adds DOI url link
-    record = eprint_from_record(record)
-    return record
+    
+    :param retry: number of times to retry call-limited API calls
+    :type retry: `int` 
+    """
+
+    def actual_annotate(record):
+        """Follows visitor design-pattern to modify BibTeX records
+    
+        :param record: the record
+        :type record: `dict`
+    
+        :returns the modified record
+        :rtype `dict`
+        """
+        record = try_x_times(retry)(doi_from_record)(record)
+        if not record:
+            raise TypeError('record expected to have value')
+        record = doi(record)  # adds DOI url link
+        record = eprint_from_record(record)
+        return record
+
+    return actual_annotate
 
 
-def try_x_times(x=retry):
+def try_x_times(retry):
+    """
+    :param retry: number of times to retry call-limited API calls
+    :type retry: `int` 
+    """
+
     def dec(f):
         def inner(record):
             attempts, failed_attempts = 0, 0
             res = None
-            while attempts < x:
+            while attempts < retry:
                 try:
                     res = f(record)
                 except ConnectionError as e:
@@ -52,7 +66,7 @@ def try_x_times(x=retry):
                 finally:
                     attempts += 1
             if attempts == failed_attempts:
-                raise ConnectionError('Reached Crossref API call limit AND retried {} times.'.format(x))
+                raise ConnectionError('Reached Crossref API call limit AND retried {} times.'.format(retry))
             assert res is not None
             return res
 
@@ -61,7 +75,9 @@ def try_x_times(x=retry):
     return dec
 
 
-@try_x_times()
+doi_from_record_withretry = lambda r: try_x_times(r)(doi_from_record)
+
+
 def doi_from_record(record):
     """Finds the DOI online (using CrossRef's API) then adds it to the record
 
@@ -104,25 +120,41 @@ def eprint_from_record(record):
     """
     if 'eprint' not in record:
         record['eprint'] = arxiv_eprint_from_query('id_list={}'.format(record['doi']) if 'doi' in record
-                                                else 'all:{}'.format(' '.join('{}'.format(v)
-                                                                              for v in record.itervalues())))
+                                                   else 'all:{}'.format(' '.join('{}'.format(v)
+                                                                                 for v in record.itervalues())))
 
 
-def get_bibtex_parser():
+def get_bibtex_parser(retry=5):
     """
     Creates a parser for rading BibTeX files
+    
+    :param retry: number of times to retry call-limited API calls
+    :type retry: `int`
 
     :return: parser instantiated with `annotate` customisation
     :rtype: `BibTexParser`
     """
-    parser = BibTexParser()
-    parser.customization = annotate
-    return parser
+    _parser.customization = annotate(retry)
+    return _parser
 
 
-parser = get_bibtex_parser()
+_parser = BibTexParser()
 
-AnnotateMarshall = namedtuple('AnnotateMarshall', ('load', 'loads', 'dump', 'dumps'))(
-    load=partial(bibtexparser.load, parser=parser), loads=partial(bibtexparser.loads, parser=parser),
-    dumps=bibtexparser.dumps, dump=bibtexparser.dump
-)
+Marshall = namedtuple('Marshall', ('load', 'loads', 'dump', 'dumps'))
+
+
+def deploy_marshall(retry):
+    """
+    Creates a parser for rading BibTeX files
+
+    :param retry: number of times to retry call-limited API calls
+    :type retry: `int`
+
+    :return: parser instantiated with `annotate` customisation
+    :rtype: `bibtex_auto_annotate.annotate.Marshall`
+    """
+    parser = get_bibtex_parser(retry)
+    return Marshall(
+        load=partial(bibtexparser.load, parser=parser), loads=partial(bibtexparser.loads, parser=parser),
+        dumps=bibtexparser.dumps, dump=bibtexparser.dump
+    )

@@ -13,4 +13,4 @@ def arxiv_eprint_from_query(search_query):
     for entry in feedparser.parse(urlopen(base_url + query).read()).entries:
         for link in entry.links:
             if link.rel == 'alternate':
-                return 'arXiv:{}'.format(link.rel[link.rel.rfind('/')+1:])
+                return 'arXiv:{}'.format(link.rel[link.rel.rfind('/') + 1:])

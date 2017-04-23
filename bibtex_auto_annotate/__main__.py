@@ -6,12 +6,15 @@ from functools import partial
 from glob import iglob
 from itertools import chain, imap
 from os import path
-from argparse import ArgumentParser, ArgumentTypeError, FileType
-from sys import argv, exit, stderr, stdout
+from argparse import ArgumentParser, ArgumentTypeError
+from sys import stdout
 from codecs import open
 
-from __init__ import __version__
-import bibtex_auto_annotate.annotate
+from __init__ import __version__, get_logger
+from bibtex_auto_annotate.annotate import deploy_marshall
+
+logger = get_logger('CLI')
+AnnotateMarshall = None  # type: bibtex_auto_annotate.annotate.Marshall
 
 
 def _build_parser():
@@ -51,18 +54,21 @@ def _process_glob_files(files):
 
         first_file = next(_files, nf())
         for f in chain([first_file], _files):
-            print('File exists: {}'.format(f))
+            logger.warn('File exists: {}'.format(f))
 
     return tuple(imap(one, files))
 
 
-def load_parse_change_emit(fh, outfile):
-    with open(outfile, 'wt', encoding='ISO-8859-1') as out:
-        if not hasattr(fh, 'read'):
-            with open(fh, encoding='ISO-8859-1') as fh:
-                bibtex_auto_annotate.annotate.AnnotateMarshall.dump(AnnotateMarshall.load(fh), out)
-        else:
-            bibtex_auto_annotate.annotate.AnnotateMarshall.dump(AnnotateMarshall.load(fh), out)
+def load_parse_change_emit(marshall):
+    def actual_load_parse_change_emit(fh, outfile):
+        with open(outfile, 'wt', encoding='ISO-8859-1') as out:
+            if not hasattr(fh, 'read'):
+                with open(fh, encoding='ISO-8859-1') as fh:
+                    marshall.dump(marshall.load(fh), out)
+            else:
+                marshall.dump(marshall.load(fh), out)
+
+    return actual_load_parse_change_emit
 
 
 def main(args):
@@ -71,10 +77,10 @@ def main(args):
     :param args:
     :type args: `argparse.Namespace`
     """
-    global bibtex_auto_annotate
-    bibtex_auto_annotate.annotate.retry = args.retry
+
+    # AnnotateMarshall =
     # args.files = _process_glob_files(args.files)
-    load_parse_change_emit_f = partial(load_parse_change_emit, outfile=args.outfile)
+    load_parse_change_emit_f = partial(load_parse_change_emit(deploy_marshall(args.retry)), outfile=args.outfile)
     return tuple(imap(load_parse_change_emit_f, args.files))
 
 
