@@ -1,3 +1,11 @@
+# -*- coding: ISO-8859-1 -*-
+from __future__ import print_function
+
+import sys
+
+reload(sys)
+sys.setdefaultencoding('ISO-8859-1')
+
 from collections import deque
 from itertools import islice
 from pprint import PrettyPrinter

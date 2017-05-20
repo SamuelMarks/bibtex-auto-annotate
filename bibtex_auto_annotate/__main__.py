@@ -1,6 +1,10 @@
 #!/usr/bin/env python
-
+# -*- coding: ISO-8859-1 -*-
 from __future__ import print_function
+
+import sys
+reload(sys)
+sys.setdefaultencoding('ISO-8859-1')
 
 from functools import partial
 from glob import iglob
@@ -63,8 +67,8 @@ def load_parse_change_emit(marshall):
     def actual_load_parse_change_emit(fh, outfile):
         with open(outfile, 'wt', encoding='ISO-8859-1') as out:
             if not hasattr(fh, 'read'):
-                with open(fh, encoding='ISO-8859-1') as fh:
-                    marshall.dump(marshall.load(fh), out)
+                with open(fh, encoding='ISO-8859-1') as in_fh:
+                    marshall.dump(marshall.load(in_fh), out)
             else:
                 marshall.dump(marshall.load(fh), out)
 
@@ -80,6 +84,7 @@ def main(args):
 
     # AnnotateMarshall =
     # args.files = _process_glob_files(args.files)
+    print (args)
     load_parse_change_emit_f = partial(load_parse_change_emit(deploy_marshall(args.retry)), outfile=args.outfile)
     return tuple(imap(load_parse_change_emit_f, args.files))
 

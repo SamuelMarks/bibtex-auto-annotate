@@ -1,6 +1,16 @@
+# -*- coding: ISO-8859-1 -*-
+from __future__ import print_function
+
+import sys
+
+reload(sys)
+sys.setdefaultencoding('ISO-8859-1')
+
 from collections import namedtuple
 from functools import partial
+from platform import python_version_tuple
 from time import sleep
+from sys import stderr
 
 import bibtexparser
 from bibtexparser.bparser import BibTexParser
@@ -9,10 +19,13 @@ from habanero import Crossref
 
 from bibtex_auto_annotate import get_logger
 from bibtex_auto_annotate.arXiv import arxiv_eprint_from_query
+from bibtex_auto_annotate.utils import pp
 
 log = get_logger('annotate')
 
 cr = Crossref()
+
+py_ver = int(python_version_tuple()[0])
 
 
 class ConnectionError(IOError):
@@ -39,7 +52,12 @@ def annotate(retry):
         if not record:
             raise TypeError('record expected to have value')
         record = doi(record)  # adds DOI url link
+        if 'link' in record:
+            if 'url' in record['link'] and record['link']['url']:
+                record['howpublished'] = '\url{' + '{}'.format(record['link']['url']) + '}'
+            del record['link']
         record = eprint_from_record(record)
+        pp(record)
         return record
 
     return actual_annotate
@@ -62,6 +80,7 @@ def try_x_times(retry):
                     failed_attempts += 1
                     log.exception(e)
                     log.warn('Sleeping for 30 seconds; then trying again')
+                    stderr.write('Sleeping for 30 seconds; then trying again\n')
                     sleep(30)
                 finally:
                     attempts += 1
@@ -91,14 +110,21 @@ def doi_from_record(record):
         try:
             crossref_rec = cr.works(
                 limit=1, **{'query_title': record['title']} if 'title' in record
-                else {'query': ' '.join('{}'.format(v) for v in record.itervalues())}
+                else {'query': ' '.join('{}'.format(v)
+                                        for v in getattr(record, 'itervalues' if py_ver == 2 else 'values')())}
             )['message']['items'][0]
         except KeyError as e:
             if e.message == 'content-type':
                 raise ConnectionError('Reached Crossref API call limit.')
             raise
 
-        record['doi'] = crossref_rec['DOI']
+        print('crossref_rec =', crossref_rec)
+        if 'doi' in crossref_rec:
+            record['doi'] = crossref_rec['DOI']
+        if 'link' in crossref_rec and len(crossref_rec['link']) and 'URL' in crossref_rec['link'][0]:
+            record['howpublished'] = '\url{' + '{}'.format(crossref_rec['link'][0]['URL']) + '}'
+        elif 'link' in crossref_rec:
+            print("crossref_rec['link'] was:", crossref_rec['link'])
 
         '''
         # Example of using the Crossref API to get a BibTeX file from the DOI:
@@ -119,9 +145,19 @@ def eprint_from_record(record):
     :rtype `dict`
     """
     if 'eprint' not in record:
-        record['eprint'] = arxiv_eprint_from_query('id_list={}'.format(record['doi']) if 'doi' in record
-                                                   else 'all:{}'.format(' '.join('{}'.format(v)
-                                                                                 for v in record.itervalues())))
+        try:
+            eprint = arxiv_eprint_from_query('id_list={}'.format(record['doi']) if 'doi' in record
+                                             else 'all:{}'.format(
+                ' '.join('{}'.format(v) for v in getattr(record, 'itervalues' if py_ver == 2 else 'values')())))
+        except UnicodeEncodeError as e:
+            log.warn('{} on: {}'.format(e.__class__.__name__, record['doi'] if 'doi' in record else record))
+            log.exception(e)
+            eprint = None
+        if eprint is not None and eprint != 'arXiv:alternate':
+            record['eprint'] = eprint
+            print('eprint =', eprint)
+
+    return record
 
 
 def get_bibtex_parser(retry=5):

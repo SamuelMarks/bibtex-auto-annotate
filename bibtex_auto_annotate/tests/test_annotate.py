@@ -1,11 +1,20 @@
-from __future__ import absolute_import, print_function
+# -*- coding: ISO-8859-1 -*-
+from __future__ import print_function, absolute_import
 
+import sys
+reload(sys)
+sys.setdefaultencoding('ISO-8859-1')
+
+from argparse import Namespace
 from platform import python_version_tuple
+from tempfile import mkstemp
 from unittest import TestCase, main as unittest_main
-from os import path
+from os import path, remove
+from codecs import open
 
 from pkg_resources import resource_filename
 
+from bibtex_auto_annotate.__main__ import main
 from bibtex_auto_annotate.annotate import deploy_marshall, doi_from_record, try_x_times
 from bibtex_auto_annotate.utils import pp, it_consumes
 
@@ -47,12 +56,10 @@ class BibTeXautoAnnotateTest(TestCase):
         '''
     )
 
-    @classmethod
-    def setUpClass(cls):
-        cls.AnnotateMarshall = deploy_marshall(retry=5)
+    AnnotateMarshall = deploy_marshall(retry=5)
 
     @staticmethod
-    def has_doi_and_link(entry):
+    def has_doi_and_howpublished(entry):
         """
         :param entry: BibTeX entry
         :type entry: dict
@@ -60,21 +67,39 @@ class BibTeXautoAnnotateTest(TestCase):
         :returns test result, error message
         :rtype `(bool, str)`
         """
-        return 'doi' in entry and 'link' in entry, 'entry doesn\'t contain `doi` and `link`. Got: {}'.format(entry)
+        return 'doi' in entry and 'howpublished' in entry, \
+               'entry doesn\'t contain `doi` and `howpublished`. Got: {}'.format(entry)
 
     def test_BibDatabase_with_one_entry(self):
         parsed_entries = self.AnnotateMarshall.loads(self.bibtex_samples[0])
         pp(parsed_entries.entries)
-        it_consumes(imap(lambda entry: self.assertTrue(*self.has_doi_and_link(entry)),
+        it_consumes(imap(lambda entry: self.assertTrue(*self.has_doi_and_howpublished(entry)),
                          parsed_entries.entries))
 
-    def test_full_bibtex_sample(self):
+    def bibtex_sample_test(self, fname, rem_after=False):
+        attr_name = {'quantum_internet.bib': 'full_bibtex_sample',
+                     'quantum_internet.short.bib': 'short_bibtex_sample'}[fname]
+        annotated_bib = mkstemp(suffix='.bib', text=True)[1]
+        print('Writing processed \'{}\' out to {}'.format(fname, annotated_bib))
         with open(path.join(path.dirname(resource_filename('bibtex_auto_annotate', '__main__.py')),
-                            '_data', 'quantum_internet.short.bib')) as f:
-            self.full_bibtex_sample = self.AnnotateMarshall.load(f)
-        parsed_entries = self.full_bibtex_sample.entries
-        it_consumes(imap(lambda entry: self.assertTrue(*self.has_doi_and_link(entry)),
-                         parsed_entries))
+                            '_data', fname), encoding='ISO-8859-1') as in_fh:
+            main(Namespace(files=(in_fh,), outfile=annotated_bib, retry=15))
+
+        with open(annotated_bib, encoding='ISO-8859-1') as out_fh:
+            setattr(self, attr_name, self.AnnotateMarshall.load(out_fh))
+
+        print('[fin] Writing processed \'{}\' out to {}'.format(fname, annotated_bib))
+        it_consumes(imap(lambda entry: self.assertTrue(*self.has_doi_and_howpublished(entry)),
+                         getattr(getattr(self, attr_name), 'entries')))
+        print('self.{}.entries ='.format(attr_name), getattr(getattr(self, attr_name), 'entries'))
+        if rem_after:
+            remove(annotated_bib)
+
+    def test_cli_full_bibtex_sample(self):
+        self.bibtex_sample_test('quantum_internet.bib')
+
+    def test_cli_short_bibtex_sample(self):
+        self.bibtex_sample_test('quantum_internet.short.bib')
 
     def test_odd_case(self):
         entry = {
