@@ -83,7 +83,7 @@ class BibTeXautoAnnotateTest(TestCase):
         print('Writing processed \'{}\' out to {}'.format(fname, annotated_bib))
         with open(path.join(path.dirname(resource_filename('bibtex_auto_annotate', '__main__.py')),
                             '_data', fname), encoding='ISO-8859-1') as in_fh:
-            main(Namespace(files=(in_fh,), outfile=annotated_bib, retry=15))
+            main(Namespace(files=(in_fh,), outfile=annotated_bib, retry=30))
 
         with open(annotated_bib, encoding='ISO-8859-1') as out_fh:
             setattr(self, attr_name, self.AnnotateMarshall.load(out_fh))

@@ -11,12 +11,12 @@ Annotates all BibTeX records with:
 ## Installation
 Ensure [Python](https://www.python.org/downloads) and [`pip`](https://pip.pypa.io/en/stable/installing) are installed, then from your command-line interface run:
 
-    pip install https://api.github.com/repos/SamuelMarks/bibtex-auto-annotate/zipball
+    pip install https://api.github.com/repos/SamuelMarks/bibtex-auto-annotate/zipball#egg=bibtex_auto_annotate
 
 ## Usage
 
     python -m bibtex_auto_annotate -h
-    usage: bibtex_auto_annotate [-h] [-v] [-f FILE] [-o OUTFILE]
+    usage: bibtex_auto_annotate [-h] [-v] [-f FILE] [-o OUTFILE]  [-r RETRY]
 
     BibTeX auto annotator
     
@@ -28,6 +28,8 @@ Ensure [Python](https://www.python.org/downloads) and [`pip`](https://pip.pypa.i
                             directories or filenames
       -o OUTFILE, --output-file OUTFILE
                             Output BibTeX file
+      -r RETRY, --retry RETRY
+                            Retry times (for CrossRef API). [Default: 5]
 
 
 ## Development

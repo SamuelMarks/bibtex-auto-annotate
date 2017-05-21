@@ -118,8 +118,7 @@ def doi_from_record(record):
                 raise ConnectionError('Reached Crossref API call limit.')
             raise
 
-        print('crossref_rec =', crossref_rec)
-        if 'doi' in crossref_rec:
+        if 'DOI' in crossref_rec:
             record['doi'] = crossref_rec['DOI']
         if 'link' in crossref_rec and len(crossref_rec['link']) and 'URL' in crossref_rec['link'][0]:
             record['howpublished'] = '\url{' + '{}'.format(crossref_rec['link'][0]['URL']) + '}'
@@ -146,16 +145,20 @@ def eprint_from_record(record):
     """
     if 'eprint' not in record:
         try:
-            eprint = arxiv_eprint_from_query('id_list={}'.format(record['doi']) if 'doi' in record
-                                             else 'all:{}'.format(
-                ' '.join('{}'.format(v) for v in getattr(record, 'itervalues' if py_ver == 2 else 'values')())))
+            if 'title' not in record:
+                # TODO: DOI => title resolution
+                log.warn('Not resolving eprint for this record, as title not provided:', record)
+                return record
+            query = 'ti:{title}{author_query}'.format(title=record['title'],
+                                                      author_query='+AND+au:{author}'.format(author=record['author'])
+                                                      if 'author' in record else '')
+            eprint = arxiv_eprint_from_query(query)
         except UnicodeEncodeError as e:
             log.warn('{} on: {}'.format(e.__class__.__name__, record['doi'] if 'doi' in record else record))
             log.exception(e)
             eprint = None
         if eprint is not None and eprint != 'arXiv:alternate':
             record['eprint'] = eprint
-            print('eprint =', eprint)
 
     return record
 
