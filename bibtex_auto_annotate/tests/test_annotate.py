@@ -1,7 +1,11 @@
 # -*- coding: ISO-8859-1 -*-
 from __future__ import print_function, absolute_import
 
+import json
 import sys
+
+from bibtexparser.bibdatabase import BibDatabase
+
 reload(sys)
 sys.setdefaultencoding('ISO-8859-1')
 
@@ -102,13 +106,41 @@ class BibTeXautoAnnotateTest(TestCase):
         self.bibtex_sample_test('quantum_internet.short.bib')
 
     def test_odd_case(self):
+        entry_s = '''
+        @article{bib:SalehEffSim16,
+            author = "Saleh Rahimi-Keshari and Timothy C. Ralph and Carlton M. Caves",
+            title = "Sufficient Conditions for Efficient Classical Simulation of Quantum Optics",
+            year = "2016",
+            journal = "Phys. Rev. X",
+            volume = "6",
+            pages = "021039"
+        }'''
         entry = {
-            u'title': u'Sufficient Conditions for Efficient Classical Simulation of Quantum Optics',
-            u'journal': u'Phys. Rev. X',
+            'ID': 'bib:SalehEffSim16',
+            'ENTRYTYPE': u'article',
             u'author': u'Saleh Rahimi-Keshari and Timothy C. Ralph and Carlton M. Caves',
-            'ID': 'bib:SalehEffSim16', u'volume': u'6', u'year': u'2016', 'ENTRYTYPE': u'article'
+            u'journal': u'Phys. Rev. X',
+            u'title': u'Sufficient Conditions for Efficient Classical Simulation of Quantum Optics',
+            u'volume': u'6',
+            u'year': u'2016'
+
         }
-        pp(try_x_times(5)(doi_from_record)(entry))
+        result = self.AnnotateMarshall.loads(entry_s).get_entry_dict()
+        expect = {'bib:SalehEffSim16': {
+            'ENTRYTYPE': u'article',
+            'ID': 'bib:SalehEffSim16',
+            u'author': u'Saleh Rahimi-Keshari and Timothy C. Ralph and Carlton M. Caves',
+            'doi': u'10.1103/physrevx.6.021039',
+            'eprint': 'arXiv:1511.06526v2',
+            'howpublished': '\\url{http://link.aps.org/article/10.1103/PhysRevX.6.021039}',
+            u'journal': u'Phys. Rev. X',
+            u'title': u'Sufficient Conditions for Efficient Classical Simulation of Quantum Optics',
+            u'volume': u'6',
+            u'year': u'2016'}
+        }
+        self.assertEqual(result, expect)
+        self.assertDictContainsSubset(result, expect)
+        self.assertDictContainsSubset(expect, result)
 
 
 if __name__ == '__main__':
